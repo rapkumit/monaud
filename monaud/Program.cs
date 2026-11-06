@@ -142,7 +142,7 @@ class Program
 {
     public static void Main(string[] args)
     {
-        // Use as a basis for switching.
+        // TODO: Use as basis for watching duplicates
         Dictionary<string, string> stateHandler = new Dictionary<string, string>();
 
         while (true)
