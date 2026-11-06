@@ -54,7 +54,7 @@ internal static class NativeMethods
 
 class Helper
 {
-    class Window
+    public class Window
     {
         // Get the PID in string format
         public static string GetProcessId(IntPtr hWnd)
@@ -119,7 +119,7 @@ class Helper
         }
     }
 
-    class Monitor
+    public class Monitor
     {
         // Get monitor name from its handler (hMonitor)
         public static string GetMonitorName(IntPtr hMonitor)
@@ -143,7 +143,7 @@ class Helper
         }
     }
 
-    class Audio
+    public class Audio
     {
 
     }
@@ -160,12 +160,11 @@ class Program
         while (true)
         {
             IntPtr hWnd = NativeMethods.GetForegroundWindow();
-
-            string processID = Helper.GetProcessId(hWnd);
-            string processName = Helper.GetProcessName(hWnd);
+            string processID = Helper.Window.GetProcessId(hWnd);
+            string processName = Helper.Window.GetProcessName(hWnd);
 
             IntPtr hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
-            string monitorName = Helper.GetMonitorName(hMonitor);
+            string monitorName = Helper.Monitor.GetMonitorName(hMonitor);
 
             Console.WriteLine($"{monitorName} | PID: {processID} | PN: {processName}");
 
