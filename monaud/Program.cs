@@ -1,27 +1,71 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using static NativeMethods;
 
 internal static class NativeMethods
 {
-    // Get the HWND of the currently active foreground window
+    // Get the hWnd of the currently active foreground window
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
 
-    // Get the raw (UINT) Process ID (PID) from HWND
+    // Get the raw (UINT) Process ID (PID) from hWnd
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-    // Get the PID in string format
-    public static string GetProcessId(IntPtr hwnd)
+    // Enum for the MonitorFromWindow flags
+    public enum MonitorOptions : uint
     {
-        hwnd = GetForegroundWindow();
+        MONITOR_DEFAULTTONULL = 0x00000000,
+        MONITOR_DEFAULTTOPRIMARY = 0x00000001,
+        MONITOR_DEFAULTTONEAREST = 0x00000002
+    }
+
+    // Get the handle of the monitor (HMONITOR) associated with a window
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromWindow(IntPtr hWnd, MonitorOptions dwFlags);
+
+    // Struct representing a rectangle
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    // Struct containing information about a display monitor
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct MONITORINFOEX
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+        // The size is 32 (CCHDEVICENAME)
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+        public string szDevice;
+    }
+
+    // API to get monitor information
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFOEX lpmi);
+}
+
+class Helper
+{
+    // Get the PID in string format
+    public static string GetProcessId(IntPtr hWnd)
+    {
+        hWnd = GetForegroundWindow();
         // TODO: Add function to detect all of the programs within startup
-        if (hwnd == IntPtr.Zero) {
+        if (hWnd == IntPtr.Zero)
+        {
             Console.WriteLine("No foreground window detected");
             return "";
         }
-        
-        GetWindowThreadProcessId(hwnd, out uint pid);
+
+        GetWindowThreadProcessId(hWnd, out uint pid);
 
         try
         {
@@ -40,18 +84,19 @@ internal static class NativeMethods
             return "";
         }
     }
+
     // Get the Process Name (PN) from PID
-    public static string GetProcessName(IntPtr hwnd)
+    public static string GetProcessName(IntPtr hWnd)
     {
-        hwnd = GetForegroundWindow();
+        hWnd = GetForegroundWindow();
         // TODO: Add different function to detect all of the programs within startup
-        if (hwnd == IntPtr.Zero)
+        if (hWnd == IntPtr.Zero)
         {
             Console.WriteLine("No foreground window detected");
             return "";
         }
 
-        GetWindowThreadProcessId(hwnd, out uint pid);
+        GetWindowThreadProcessId(hWnd, out uint pid);
 
         try
         {
@@ -70,19 +115,47 @@ internal static class NativeMethods
             return "";
         }
     }
+
+    // Get monitor name from its handler (hMonitor)
+    public static string GetMonitorName(IntPtr hMonitor)
+    {
+        if (hMonitor == IntPtr.Zero)
+        {
+            return "No Monitor";
+        }
+
+        MONITORINFOEX mi = new MONITORINFOEX();
+        // Default behavior according to the docs
+        mi.cbSize = Marshal.SizeOf(typeof(MONITORINFOEX));
+
+        if (GetMonitorInfo(hMonitor, ref mi))
+        {
+            // This will return a name like "\\.\DISPLAY1"
+            return mi.szDevice;
+        }
+
+        return "Unknown Monitor";
+    }
 }
+
 class Program
 {
     public static void Main(string[] args)
     {
+        // Use as a basis for switching.
+        Dictionary<string, string> stateHandler = new Dictionary<string, string>();
+
         while (true)
         {
-            IntPtr hwnd = NativeMethods.GetForegroundWindow();
+            IntPtr hWnd = NativeMethods.GetForegroundWindow();
 
-            string processID = NativeMethods.GetProcessId(hwnd);
-            string processName = NativeMethods.GetProcessName(hwnd);
+            string processID = Helper.GetProcessId(hWnd);
+            string processName = Helper.GetProcessName(hWnd);
 
-            Console.WriteLine($"PID: {processID} | PN: {processName}");
+            IntPtr hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
+            string monitorName = Helper.GetMonitorName(hMonitor);
+
+            Console.WriteLine($"{monitorName} | PID: {processID} | PN: {processName}");
 
             Thread.Sleep(1000);
         }
