@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 
 internal static class NativeMethods
@@ -58,10 +57,6 @@ internal static class NativeMethods
         {
             using Process process = Process.GetProcessById((int)pid);
 
-            Console.WriteLine($"Window Handle: {hwnd}");
-            Console.WriteLine($"Process PID:   {pid}");
-            Console.WriteLine($"Process Name:  {process.ProcessName}");
-
             return process.ProcessName;
         }
         catch (ArgumentException)
@@ -74,6 +69,22 @@ internal static class NativeMethods
             Console.WriteLine("Access denied to process information.");
             return "";
         }
+    }
 
+    public static void Main(string[] args)
+    {
+        IntPtr hwnd = NativeMethods.GetForegroundWindow();
+        
+        string processID = NativeMethods.GetProcessId(hwnd);
+        string processName = NativeMethods.GetProcessName(hwnd);
+
+        while (true)
+        {
+            Console.WriteLine($"Window Handle: {hwnd}");
+            Console.WriteLine($"Process PID:   {processID}");
+            Console.WriteLine($"Process Name:  {processName}");
+
+            Thread.Sleep(1000);
+        }
     }
 }
