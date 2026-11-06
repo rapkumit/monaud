@@ -5,11 +5,11 @@ internal static class NativeMethods
 {
     // Get the HWND of the currently active foreground window
     [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
+    public static extern IntPtr GetForegroundWindow();
 
     // Get the raw (UINT) Process ID (PID) from HWND
     [DllImport("user32.dll", SetLastError = true)]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     // Get the PID in string format
     public static string GetProcessId(IntPtr hwnd)
@@ -70,7 +70,9 @@ internal static class NativeMethods
             return "";
         }
     }
-
+}
+class Program
+{
     public static void Main(string[] args)
     {
         while (true)
@@ -80,9 +82,7 @@ internal static class NativeMethods
             string processID = NativeMethods.GetProcessId(hwnd);
             string processName = NativeMethods.GetProcessName(hwnd);
 
-            Console.WriteLine($"Window Handle: {hwnd}");
-            Console.WriteLine($"Process PID:   {processID}");
-            Console.WriteLine($"Process Name:  {processName}");
+            Console.WriteLine($"PID: {processID} | PN: {processName}");
 
             Thread.Sleep(1000);
         }
