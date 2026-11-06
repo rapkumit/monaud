@@ -73,13 +73,13 @@ internal static class NativeMethods
 
     public static void Main(string[] args)
     {
-        IntPtr hwnd = NativeMethods.GetForegroundWindow();
-        
-        string processID = NativeMethods.GetProcessId(hwnd);
-        string processName = NativeMethods.GetProcessName(hwnd);
-
         while (true)
         {
+            IntPtr hwnd = NativeMethods.GetForegroundWindow();
+
+            string processID = NativeMethods.GetProcessId(hwnd);
+            string processName = NativeMethods.GetProcessName(hwnd);
+
             Console.WriteLine($"Window Handle: {hwnd}");
             Console.WriteLine($"Process PID:   {processID}");
             Console.WriteLine($"Process Name:  {processName}");
