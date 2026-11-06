@@ -54,88 +54,100 @@ internal static class NativeMethods
 
 class Helper
 {
-    // Get the PID in string format
-    public static string GetProcessId(IntPtr hWnd)
+    class Window
     {
-        hWnd = GetForegroundWindow();
-        // TODO: Add function to detect all of the programs within startup
-        if (hWnd == IntPtr.Zero)
+        // Get the PID in string format
+        public static string GetProcessId(IntPtr hWnd)
         {
-            Console.WriteLine("No foreground window detected");
-            return "";
+            hWnd = GetForegroundWindow();
+            // TODO: Add function to detect all of the programs within startup
+            if (hWnd == IntPtr.Zero)
+            {
+                Console.WriteLine("No foreground window detected");
+                return "";
+            }
+
+            GetWindowThreadProcessId(hWnd, out uint pid);
+
+            try
+            {
+                using Process process = Process.GetProcessById((int)pid);
+
+                return pid.ToString();
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine($"Process {pid} is no longer running.");
+                return "";
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                Console.WriteLine("Access denied to process information.");
+                return "";
+            }
         }
 
-        GetWindowThreadProcessId(hWnd, out uint pid);
+        // Get the Process Name (PN) from PID
+        public static string GetProcessName(IntPtr hWnd)
+        {
+            hWnd = GetForegroundWindow();
+            // TODO: Add different function to detect all of the programs within startup
+            if (hWnd == IntPtr.Zero)
+            {
+                Console.WriteLine("No foreground window detected");
+                return "";
+            }
 
-        try
-        {
-            using Process process = Process.GetProcessById((int)pid);
+            GetWindowThreadProcessId(hWnd, out uint pid);
 
-            return pid.ToString();
-        }
-        catch (ArgumentException)
-        {
-            Console.WriteLine($"Process {pid} is no longer running.");
-            return "";
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            Console.WriteLine("Access denied to process information.");
-            return "";
+            try
+            {
+                using Process process = Process.GetProcessById((int)pid);
+
+                return process.ProcessName;
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine($"Process {pid} is no longer running.");
+                return "";
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                Console.WriteLine("Access denied to process information.");
+                return "";
+            }
         }
     }
 
-    // Get the Process Name (PN) from PID
-    public static string GetProcessName(IntPtr hWnd)
+    class Monitor
     {
-        hWnd = GetForegroundWindow();
-        // TODO: Add different function to detect all of the programs within startup
-        if (hWnd == IntPtr.Zero)
+        // Get monitor name from its handler (hMonitor)
+        public static string GetMonitorName(IntPtr hMonitor)
         {
-            Console.WriteLine("No foreground window detected");
-            return "";
-        }
+            if (hMonitor == IntPtr.Zero)
+            {
+                return "No Monitor";
+            }
 
-        GetWindowThreadProcessId(hWnd, out uint pid);
+            MONITORINFOEX mi = new MONITORINFOEX();
+            // Default behavior according to the docs
+            mi.cbSize = Marshal.SizeOf(typeof(MONITORINFOEX));
 
-        try
-        {
-            using Process process = Process.GetProcessById((int)pid);
+            if (GetMonitorInfo(hMonitor, ref mi))
+            {
+                // This will return a name like "\\.\DISPLAY1"
+                return mi.szDevice;
+            }
 
-            return process.ProcessName;
-        }
-        catch (ArgumentException)
-        {
-            Console.WriteLine($"Process {pid} is no longer running.");
-            return "";
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            Console.WriteLine("Access denied to process information.");
-            return "";
+            return "Unknown Monitor";
         }
     }
 
-    // Get monitor name from its handler (hMonitor)
-    public static string GetMonitorName(IntPtr hMonitor)
+    class Audio
     {
-        if (hMonitor == IntPtr.Zero)
-        {
-            return "No Monitor";
-        }
 
-        MONITORINFOEX mi = new MONITORINFOEX();
-        // Default behavior according to the docs
-        mi.cbSize = Marshal.SizeOf(typeof(MONITORINFOEX));
-
-        if (GetMonitorInfo(hMonitor, ref mi))
-        {
-            // This will return a name like "\\.\DISPLAY1"
-            return mi.szDevice;
-        }
-
-        return "Unknown Monitor";
     }
+
 }
 
 class Program
