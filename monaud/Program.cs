@@ -146,7 +146,7 @@ class Helper
             return "Unknown Monitor";
         }
 
-        public static List<string> GetAllMonitorDevices()
+        public static List<string> GetAllActiveMonitorDevices()
         {
             List<string> monitorNames = new List<string>();
 
@@ -212,7 +212,7 @@ class Helper
             return activePlaybackDevices;
         }
 
-        // Depends on: SoundVolumeCommandLine by NirSoft
+        // DEPENDS ON: SoundVolumeCommandLine by NirSoft
         // p.s. Thanks NirSoft for the awesome application
         // Please do check em out https://www.nirsoft.net/utils/sound_volume_command_line.html >:0
         public static string SetDefaultDevice(string deviceName, string processName)
@@ -224,29 +224,32 @@ class Helper
 
 class Engine
 {   
-
-    public void Start()
+    public void Start(List<string> activePlaybackDevices, List<string> allMonitorDevices)
     {
-        List<string> getActivePlaybackDevices = Helper.Audio.GetActivePlaybackDevices();
+        foreach (var item in activePlaybackDevices)
+        {
+            Console.WriteLine(item);
+        }
 
-        foreach (var item in getActivePlaybackDevices)
+        foreach (var item in allMonitorDevices)
         {
             Console.WriteLine(item);
         }
     }
-    public void Run()
+
+    public void Run(IntPtr hWnd, string processID, string processName, IntPtr hMonitor, string monitorName)
     {
         // Process Name/ID > Monitor Name
         Dictionary<string, string> stateHandler = new Dictionary<string, string>(); // TODO: Consider 1 key and 2 values once audio routing comes in
 
         while (true)
         {
-            IntPtr hWnd = NativeMethods.GetForegroundWindow();
-            string processID = Helper.Window.GetProcessId(hWnd);
-            string processName = Helper.Window.GetProcessName(hWnd);
+            hWnd = NativeMethods.GetForegroundWindow();
+            processID = Helper.Window.GetProcessId(hWnd);
+            processName = Helper.Window.GetProcessName(hWnd);
 
-            IntPtr hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
-            string monitorName = Helper.Monitor.GetMonitorName(hMonitor);
+            hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
+            monitorName = Helper.Monitor.GetMonitorName(hMonitor);
 
             // "Is this a new process that isn't listed yet?"
             if (!stateHandler.ContainsKey(processName))
@@ -275,9 +278,20 @@ class Program
 {
     public static void Main(string[] args)
     {
+
+        IntPtr hWnd = NativeMethods.GetForegroundWindow();
+        string processID = Helper.Window.GetProcessId(hWnd);
+        string processName = Helper.Window.GetProcessName(hWnd);
+
+        IntPtr hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
+        string monitorName = Helper.Monitor.GetMonitorName(hMonitor);
+
+        List<string> activePlaybackDevices = Helper.Audio.GetActivePlaybackDevices();
+        List<string> allActiveMonitorDevices = Helper.Monitor.GetAllActiveMonitorDevices();
+
         Engine engine = new Engine();
 
-        engine.Start();
+        engine.Start(activePlaybackDevices, allActiveMonitorDevices);
         //engine.Run();
     }
 }
