@@ -143,7 +143,7 @@ class Helper
 
     public class Audio
     {
-        public string CommandLine(string fileName, string arguments)
+        private string RunCommandLine(string fileName, string arguments)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -174,8 +174,12 @@ class Helper
 
             return output;
         }
-    }
 
+        public string GetDaAnoDaAudio()
+        {
+            return RunCommandLine("cmd.exe", "/c ipconfig");
+        }
+    }
 }
 
 class Engine
