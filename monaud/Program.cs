@@ -143,7 +143,37 @@ class Helper
 
     public class Audio
     {
+        public string CommandLine(string fileName, string arguments)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
 
+            Process process = new Process
+            {
+                StartInfo = startInfo
+            };
+
+            process.Start();
+
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                return $"Error (Exit Code {process.ExitCode}): {error}";
+            }
+
+            return output;
+        }
     }
 
 }
