@@ -63,7 +63,6 @@ class Helper
             // TODO: Add function to detect all of the programs within startup
             if (hWnd == IntPtr.Zero)
             {
-                Console.WriteLine("No foreground window detected");
                 return "";
             }
 
@@ -94,7 +93,6 @@ class Helper
             // TODO: Add different function to detect all of the programs within startup
             if (hWnd == IntPtr.Zero)
             {
-                Console.WriteLine("No foreground window detected");
                 return "";
             }
 
@@ -150,12 +148,12 @@ class Helper
 
 }
 
-class Program
-{
-    public static void Main(string[] args)
+class Engine
+{   
+    public void Run()
     {
-        // TODO: Use as basis for watching duplicates
-        Dictionary<string, string> stateHandler = new Dictionary<string, string>();
+        // Process Name/ID > Monitor Name
+        Dictionary<string, string> stateHandler = new Dictionary<string, string>(); // TODO: Consider 1 key and 2 values once audio routing comes in
 
         while (true)
         {
@@ -166,9 +164,34 @@ class Program
             IntPtr hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
             string monitorName = Helper.Monitor.GetMonitorName(hMonitor);
 
-            Console.WriteLine($"{monitorName} | PID: {processID} | PN: {processName}");
+            // "Is this a new process that isn't listed yet?"
+            if (!stateHandler.ContainsKey(processName))
+            {
+                Console.WriteLine($"NEW: {processID} {processName} | {monitorName}");
+
+                stateHandler.Add(processName, monitorName);
+            }
+            // "Okay it's in our list, but has the monitor changed since last time?"
+            else if (stateHandler[processName] != monitorName)
+            {
+                Console.WriteLine($"MOVED: {processID} {processName} | {monitorName}");
+
+                stateHandler[processName] = monitorName;
+
+                // TODO: Audio routing
+            }
 
             Thread.Sleep(1000);
         }
+    }
+}
+
+class Program
+{
+    public static void Main(string[] args)
+    {
+        Engine engine = new Engine();
+
+        engine.Run();
     }
 }
