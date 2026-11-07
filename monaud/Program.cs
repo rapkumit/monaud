@@ -215,16 +215,25 @@ class Helper
         // DEPENDS ON: SoundVolumeCommandLine by NirSoft
         // p.s. Thanks NirSoft for the awesome application
         // Please do check em out https://www.nirsoft.net/utils/sound_volume_command_line.html >:0
-        public static string SetDefaultDevice(string deviceName, string processName)
+        public static string SetDefaultAudioDevice(string audioDeviceName, string processName)
         {
-            return GetCommandLine("svcl.exe", $"/SetAppDefault {deviceName} all {processName}");
+            return GetCommandLine("cmd.exe", $"/c echo \"/SetAppDefault {audioDeviceName} all {processName}\"");
         }
     }
 }
 
+class Config
+{
+    public static Dictionary<string, string> BindMonitorToDisplay = new Dictionary<string, string>()
+    {
+        {"\\\\.\\DISPLAY1", "Speakers (Realtek(R) Audio)"},
+        {"\\\\.\\DISPLAY6", "CABLE Input (VB-Audio Virtual Cable)"}
+    };
+}
+
 class Engine
 {   
-    public void Start(List<string> allActivePlaybackDevices, List<string> allMonitorDevices)
+    public static void Start(List<string> allActivePlaybackDevices, List<string> allMonitorDevices)
     {
         foreach (var item in allActivePlaybackDevices)
         {
@@ -237,36 +246,40 @@ class Engine
         }
     }
 
-    public void Run(IntPtr hWnd, IntPtr hMonitor)
+    public static void Run(IntPtr hWnd, IntPtr hMonitor)
     {
-        // Process Name/ID > Monitor Name
-        Dictionary<string, string> stateHandler = new Dictionary<string, string>(); // TODO: Consider 1 key and 2 values once audio routing comes in
+        // Process Name/ID > (Monitor Name & Audio Device)
+        Dictionary<string, string> stateHandler = new Dictionary<string, string>();
 
         while (true)
         {
             hWnd = NativeMethods.GetForegroundWindow();
-            string processID = Helper.Window.GetProcessId(hWnd);
+            string processId = Helper.Window.GetProcessId(hWnd);
             string processName = Helper.Window.GetProcessName(hWnd);
 
             hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
             string monitorName = Helper.Monitor.GetMonitorName(hMonitor);
 
+            var userPreference = Config.BindMonitorToDisplay;
+
             // "Is this a new process that isn't listed yet?"
             if (!stateHandler.ContainsKey(processName))
             {
-                Console.WriteLine($"NEW: {processID} {processName} | {monitorName}");
+                Console.WriteLine($"NEW: {processId} {processName} | {monitorName}");
 
                 stateHandler.Add(processName, monitorName);
             }
             // "Okay it's in our list, but has the monitor changed since last time?"
             else if (stateHandler[processName] != monitorName)
             {
-                Console.WriteLine($"MOVED: {processID} {processName} | {monitorName}");
+                Console.WriteLine($"MOVED: {processId} {processName} | {monitorName}");
+
+                if (userPreference.TryGetValue(monitorName, out string audioDevice))
+                {
+                    Console.WriteLine(Helper.Audio.SetDefaultAudioDevice(audioDevice, processName));
+                }
 
                 stateHandler[processName] = monitorName;
-
-                // TODO: Audio routing
-                Console.WriteLine();
             }
 
             Thread.Sleep(1000);
@@ -278,7 +291,6 @@ class Program
 {
     public static void Main(string[] args)
     {
-
         IntPtr hWnd = NativeMethods.GetForegroundWindow();
         IntPtr hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
 
@@ -287,7 +299,7 @@ class Program
 
         Engine engine = new Engine();
 
-        engine.Start(allActivePlaybackDevices, allActiveMonitorDevices);
-        engine.Run(hWnd, hMonitor);
+        Engine.Start(allActivePlaybackDevices, allActiveMonitorDevices);
+        Engine.Run(hWnd, hMonitor);
     }
 }
