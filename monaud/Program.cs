@@ -206,7 +206,18 @@ class Helper
             foreach (var device in playbackDevices)
             {
                 // device.FriendlyName returns a string like "Speakers (Realtek(R) Audio)"
-                activePlaybackDevices.Add(device.FriendlyName);
+                string friendlyName = device.FriendlyName;
+
+                // But SVCL only needs Realtek(R) Audio, therefore:
+                int openingParenthesis = friendlyName.IndexOf('(');
+                int closingParenthesis = friendlyName.LastIndexOf(')');
+
+                if (openingParenthesis >= 0 && closingParenthesis > openingParenthesis)
+                {
+                    friendlyName = friendlyName[(openingParenthesis + 1)..closingParenthesis].Trim();
+                }
+
+                activePlaybackDevices.Add(friendlyName);
             }
 
             return activePlaybackDevices;
@@ -217,30 +228,33 @@ class Helper
         // Please do check em out https://www.nirsoft.net/utils/sound_volume_command_line.html >:0
         public static string SetDefaultAudioDevice(string audioDeviceName, string processName)
         {
-            return GetCommandLine("cmd.exe", $"/c echo \"/SetAppDefault {audioDeviceName} all {processName}\"");
+            return GetCommandLine("svcl.exe", $"/SetAppDefault \"{audioDeviceName}\" all \"{processName}.exe\"");
         }
     }
 }
 
 class Config
 {
+    // TODO: This lowkey looks like janky
     public static Dictionary<string, string> BindMonitorToDisplay = new Dictionary<string, string>()
     {
-        {"\\\\.\\DISPLAY1", "Speakers (Realtek(R) Audio)"},
-        {"\\\\.\\DISPLAY6", "CABLE Input (VB-Audio Virtual Cable)"}
+        {"\\\\.\\DISPLAY1", "Realtek(R) Audio"},
+        {"\\\\.\\DISPLAY6", "VB-Audio Virtual Cable"}
     };
 }
 
 class Engine
 {   
-    public static void Start(List<string> allActivePlaybackDevices, List<string> allMonitorDevices)
+    public static void Start(List<string> allActivePlaybackDevices, List<string> allActiveMonitorDevices)
     {
+        Console.WriteLine("Active Playback Devices");
         foreach (var item in allActivePlaybackDevices)
         {
             Console.WriteLine(item);
         }
 
-        foreach (var item in allMonitorDevices)
+        Console.WriteLine("Active Monitor Devices");
+        foreach (var item in allActiveMonitorDevices)
         {
             Console.WriteLine(item);
         }
@@ -249,6 +263,7 @@ class Engine
     public static void Run(IntPtr hWnd, IntPtr hMonitor)
     {
         // Process Name/ID > (Monitor Name & Audio Device)
+        // TODO: This lowkey looks like janky (2)
         Dictionary<string, string> stateHandler = new Dictionary<string, string>();
 
         while (true)
@@ -260,6 +275,7 @@ class Engine
             hMonitor = NativeMethods.MonitorFromWindow(hWnd, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONEAREST);
             string monitorName = Helper.Monitor.GetMonitorName(hMonitor);
 
+            // TODO: This lowkey looks like janky (3)
             var userPreference = Config.BindMonitorToDisplay;
 
             // "Is this a new process that isn't listed yet?"
@@ -274,7 +290,7 @@ class Engine
             {
                 Console.WriteLine($"MOVED: {processId} {processName} | {monitorName}");
 
-                if (userPreference.TryGetValue(monitorName, out string audioDevice))
+                if (userPreference.TryGetValue(monitorName, out var audioDevice))
                 {
                     Console.WriteLine(Helper.Audio.SetDefaultAudioDevice(audioDevice, processName));
                 }
