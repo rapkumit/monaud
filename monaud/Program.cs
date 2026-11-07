@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using NAudio.CoreAudioApi;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using static NativeMethods;
 
@@ -50,6 +51,11 @@ internal static class NativeMethods
     // API to get monitor information
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFOEX lpmi);
+
+    public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, ref RECT lprcMonitor, IntPtr dwData);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
 }
 
 class Helper
@@ -139,11 +145,24 @@ class Helper
 
             return "Unknown Monitor";
         }
+
+        public static List<string> GetAllMonitorDevices()
+        {
+            List<string> monitorNames = new List<string>();
+
+            EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMonitor, IntPtr hdc, ref RECT monitorRect, IntPtr data) =>
+            {
+                monitorNames.Add(GetMonitorName(hMonitor));
+                return true;
+            }, IntPtr.Zero);
+
+            return monitorNames;
+        }
     }
 
     public class Audio
     {
-        private string RunCommandLine(string fileName, string arguments)
+        private static string GetCommandLine(string fileName, string arguments)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -175,15 +194,46 @@ class Helper
             return output;
         }
 
-        public string GetDaAnoDaAudio()
+        public static List<string> GetActivePlaybackDevices()
         {
-            return RunCommandLine("cmd.exe", "/c ipconfig");
+            List<string> activePlaybackDevices = new List<string>();
+
+            MMDeviceEnumerator mMDeviceEnumerator = new MMDeviceEnumerator();
+
+            // Get only the active playback devices (might change in the future)
+            var playbackDevices = mMDeviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+
+            foreach (var device in playbackDevices)
+            {
+                // device.FriendlyName returns a string like "Speakers (Realtek(R) Audio)"
+                activePlaybackDevices.Add(device.FriendlyName);
+            }
+
+            return activePlaybackDevices;
+        }
+
+        // Depends on: SoundVolumeCommandLine by NirSoft
+        // p.s. Thanks NirSoft for the awesome application
+        // Please do check em out https://www.nirsoft.net/utils/sound_volume_command_line.html >:0
+        public static string SetDefaultDevice(string deviceName, string processName)
+        {
+            return GetCommandLine("svcl.exe", $"/SetAppDefault {deviceName} all {processName}");
         }
     }
 }
 
 class Engine
 {   
+
+    public void Start()
+    {
+        List<string> getActivePlaybackDevices = Helper.Audio.GetActivePlaybackDevices();
+
+        foreach (var item in getActivePlaybackDevices)
+        {
+            Console.WriteLine(item);
+        }
+    }
     public void Run()
     {
         // Process Name/ID > Monitor Name
@@ -213,6 +263,7 @@ class Engine
                 stateHandler[processName] = monitorName;
 
                 // TODO: Audio routing
+                Console.WriteLine();
             }
 
             Thread.Sleep(1000);
@@ -226,6 +277,7 @@ class Program
     {
         Engine engine = new Engine();
 
-        engine.Run();
+        engine.Start();
+        //engine.Run();
     }
 }
